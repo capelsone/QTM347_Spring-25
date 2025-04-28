@@ -1,4 +1,6 @@
-# Bird Calls in Colombia: Machine Learning
+# Bird Calls in Colombia
+## Machine Learning QTM 347 Final Project
+## By Eric Steinberg, Eva Capelson, Jacob Hillman, Veronica Vargas
 
 ## Abstract
 We developed a deep learning pipeline to classify bird species from short audio recordings, using spectrogram-based CNN models. Despite challenges like severe class imbalance, noise, and limited compute resources, we achieved reasonable performance (~24% precision) on a subset of species, laying a strong foundation for future improvements through better audio augmentation, efficient fine-tuning, and smarter model design.
