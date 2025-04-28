@@ -1,100 +1,136 @@
-# QTM347_Spring-25: BirdCLEF 2025 Bird Call Classification Project
+# Bird Calls in Colombia: Machine Learning
 
-## Project Overview
+## Abstract
+We developed a deep learning pipeline to classify bird species from short audio recordings, using spectrogram-based CNN models. Despite challenges like severe class imbalance, noise, and limited compute resources, we achieved reasonable performance (~24% precision) on a subset of species, laying a strong foundation for future improvements through better audio augmentation, efficient fine-tuning, and smarter model design.
 
-This project aims to classify bird species based on their audio recordings, inspired by real-world applications like the Merlin Bird App.
-Using the BirdCLEF 2025 dataset, we generate spectrograms from audio files and train a lightweight convolutional neural network (CNN) model.
+---
 
-## Data
+## Objective
+Classify bird species from audio recordings using deep learning models.  
+Real-world challenges: overlapping bird calls, background noise, limited labeled data.  
+Applications: conservation monitoring, biodiversity research.
 
-**Source**: BirdCLEF 2025 dataset (Xeno-Canto recordings)
+---
 
-**Samples**: Hundreds of bird species with varying sample counts, many classes severely imbalanced.
+## Dataset: BirdCLEF 2025
+- 38,000+ audio recordings (.ogg) from El Silencio Natural Reserve, Colombia.
+- Metadata provided via CSV and TXT files.
+- Focus: streamline bird species classification to aid conservation research.
 
-## Model Evolution Overview
+---
 
-### Initial Models Attempted
+## Introduction
+Goal: Build an accurate bird species classifier under GPU/time constraints, competing with lightweight baselines like BirdNetLite.
 
-#### 1. First Attempt (Baseline CNN)
-- Simple convolutional model trained directly on mel-spectrograms.
-- No data augmentation.
-- Trained on 50+ bird species simultaneously.
+Approach:
+- Preprocess audio to spectrograms.
+- Build and train CNN-based deep learning models.
+- Evaluate performance using Precision, Recall, and F1-Score metrics.
 
-**Key Issues:**
-- Severe class imbalance.
-- Quick overfitting to training data.
-- Very low validation accuracy (~1-2%).
+---
 
-#### 2. Second Attempt (Bootstrapping + Larger CNN)
-- Introduced basic bootstrapping (oversampling underrepresented classes).
-- Used a deeper CNN model.
+## Early Attempts
+- Initial simple CNNs with basic augmentation.
+- Very low accuracy (~1–2%), models struggled to learn meaningful features.
 
-**Outcomes:**
-- Slight improvement in validation accuracy (~4-5%).
-- Training slowed considerably.
-- Still significant confusion between bird species.
-- Key limitation remained: small dataset size relative to the number of classes.
+---
 
-### Final Model (ModelV2Eric.ipynb)
+## Audio Preprocessing Pipeline
+- Load and pad audio recordings.
+- Generate mel-spectrograms (log-scaled).
+- Save spectrograms as `.npy` arrays for efficient training.
+- 70/30 stratified train-test split to handle class balance.
 
-#### Data Preprocessing
-- Selected the top 10 species from metadata.
-- Extracted 5-second fixed-length audio clips.
-- Converted audio clips into mel-spectrograms (128 mel bands).
-- Saved spectrograms as `.npy` files to speed up future training runs.
+---
 
-#### Data Augmentation
-- Applied random augmentations during spectrogram generation:
-  - Time Shifting (±0.5 seconds)
-  - Pitch Shifting (±1 semitone)
-  - Gaussian Noise Injection (standard deviation = 0.005)
+## Model 1: Simple CNN
 
-**Purpose:**
-- Simulate a larger dataset.
-- Force the model to learn more generalized features rather than memorizing.
+**Setup:**
+- Model: CNN (Conv2D → MaxPool → Flatten → Fully Connected Layer).
+- Activation: ELU.
+- Optimizer: Adam (learning rate 0.001).
+- Batch Size: 32.
+- Epochs: 50.
 
-#### Model Architecture (Mini-ResNet)
-- Input Layer: Mel-spectrogram input.
-- Two Conv2D layers, each followed by BatchNormalization.
-- Skip connection (residual) between input and conv layers.
-- Global Average Pooling.
-- Dense output layer with softmax activation for multi-class classification.
+**Training Focus:**
+- Subset: Top 50 most common bird species.
 
-#### Training Strategy
-- Stratified 5-Fold Cross Validation to maintain class balance across folds.
-- EarlyStopping and ReduceLROnPlateau callbacks to optimize training.
-- Optimizer: Adam
-- Batch Size: 32
-- Maximum Epochs: 70 (with early stopping enabled)
+---
 
-## Results
+## Simple CNN Results
+- **Precision:** 0.24
+- **Recall:** 0.21
+- Cross-Entropy Loss steadily decreased during training.
+- Some species learned correctly, but generalization remained limited.
 
-**Validation Accuracy:**
-- Remained low, around 4-5%.
+---
 
-**Confusion Matrix Observations:**
-- Only a few species (e.g., Great Kiskadee) were consistently recognized.
-- Most classes were not correctly classified at all.
+## Model 2: Complex CNN with Residual Connections
 
-**Overall Trends:**
-- The model made marginal improvements over the very first baseline.
-- However, the fundamental issues of extreme class imbalance, limited data per species, and environmental noise could not be overcome without significantly more data or a much more advanced model.
+**Setup:**
+- Custom CNN using skip (residual) connections.
+- Stronger augmentations applied:
+  - Random time shifts (±0.5s)
+  - Random pitch shifts (±1 semitone)
+  - Gaussian noise injection
+- Cached spectrograms as `.npy` for speed.
+- 5-Fold Stratified Cross-Validation.
 
-**Key Insight:**
-> Despite multiple improvements to preprocessing, data augmentation, and model architecture, results remained poor. This underscores the critical importance of dataset quality, quantity, and careful class balance in real-world machine learning applications.
+---
+
+## Complex CNN Results
+- Validation Accuracy ≈ 4–5%.
+- Severe class confusion: only dominant species (e.g., Great Kiskadee) recognized.
+- Macro-averaged precision/recall close to 0 for most classes.
+- Indicates dataset quality and augmentation mattered more than model complexity.
+
+---
 
 ## Key Limitations
+- Severe class imbalance (many rare species).
+- Environmental noise and overlapping calls.
+- Spectrograms lost fine-grained timing details.
+- Computational resource constraints limited hyperparameter tuning and model scaling.
 
-- Severe class imbalance in the dataset.
-- Very few audio samples per class for some species.
-- Environmental noise and recording artifacts.
-- Limited compute resources restricted exploration of larger models.
-- Mini-ResNet, while lightweight, lacked the complexity needed for fine-grained classification.
+---
+
+## Critical Discussion: Audio Augmentation and Hyperparameter Tuning Challenges
+- **Audio augmentation is critical** to generalizing across noisy and variable bird calls.
+- Our augmentation execution (time shift, pitch shift, noise) was basic and not fully tuned.
+- Poor augmentation diversity likely harmed model generalization more than architectural limitations.
+- Fine-tuning hyperparameters (learning rates, augmentation ranges, batch sizes) proved difficult under tight computational limits.
+- Future success will depend on smarter, more efficient tuning strategies** — including early stopping, learning rate scheduling, lightweight architectures, and prioritizing augmentation.
+- Our overall project framework closely matches the pipelines used by past BirdCLEF competition winners, validating our direction even if our execution was limited by resources.
+
+---
 
 ## Next Steps
+- **Strengthen audio augmentation pipeline:**
+  - Implement dynamic time stretching, pitch shifting, environmental noise mixing.
+  - Apply spectrogram-level augmentation (e.g., SpecAugment: frequency and time masking).
+- **Tune augmentation parameters** for maximum class-preserving variability.
+- **Smarter fine-tuning of hyperparameters** (early stopping, learning rate decay, regularization).
+- Focus classification on top 10 most common species to reduce imbalance.
+- Only after augmentation improvements, **fine-tune larger pretrained models** (e.g., MobileNetV2, PANNs).
+- Explore semi-supervised learning (pseudo-labeling) to expand the effective training dataset.
 
-- Narrow focus even further to only the most common species.
-- Utilize pre-trained audio networks (e.g., YAMNet, PANNs) for better initial feature extraction.
-- Experiment with semi-supervised learning techniques (pseudo-labeling, self-training).
-- Implement stronger augmentations and/or synthetic data generation.
-- Consider fine-tuning larger architectures if more compute resources are available.
+---
+
+## Repository Structure
+- `QTM_347_project_final.ipynb`: Final simple CNN model with preprocessing and evaluation.
+- `deep_learning_model.ipynb` and `preprocessing_pipeline.ipynb`: Early-stage model explorations and preprocessing.
+- `ModelV2Eric.ipynb`: Complex CNN with skip connections, strong augmentation, and cross-validation.
+
+---
+
+## Conclusion
+This project successfully built a complete ML pipeline from raw bird call audio recordings to deep learning classification. Despite challenges like class imbalance, environmental noise, and limited compute, we achieved measurable progress. Our framework aligns closely with past BirdCLEF competition strategies, setting a strong foundation for future improvement through better augmentation, smarter fine-tuning, and more powerful model training.
+
+---
+
+## References
+- [BirdCLEF 2025 Kaggle Competition](https://www.kaggle.com/competitions/birdclef-2025)
+- [Velardo, Valerio. "The Sound of AI" YouTube Channel](https://www.youtube.com/@ValerioVelardoTheSoundofAI)
+- [Bird Sound Recognition Using CNNs (ResearchGate)](https://www.researchgate.net/publication/334163277_Bird_Sound_Recognition_Using_a_Convolutional_Neural_Network)
+
+---
